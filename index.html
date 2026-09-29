@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PEMS – প্রোডাক্ট এক্সপায়ারি ম্যানেজার</title>
+<meta name="theme-color" content="#0b7a6b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PEMS">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2f6f5; --card:#ffffff; --ink:#10231f; --muted:#5f716c; --line:#dde6e3;
+  --brand:#0b7a6b; --brand-2:#095f54; --on-brand:#ffffff;
+  --ok:#166534; --ok-bg:#dcf5e4; --soon:#8a5a00; --soon-bg:#fdefc2; --bad:#a51d1d; --bad-bg:#fbdcdc;
+  --shadow:0 1px 2px rgba(16,35,31,.06),0 6px 20px rgba(16,35,31,.06);
+  --r:14px; --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0c1513; --card:#142320; --ink:#e6f1ee; --muted:#93a8a2; --line:#233631;
+    --brand:#2dd4bf; --brand-2:#5eead4; --on-brand:#04231f;
+    --ok:#86efac; --ok-bg:#12341f; --soon:#fcd34d; --soon-bg:#3a2d08; --bad:#fca5a5; --bad-bg:#3d1616;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.3); }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Hind Siliguri','Noto Sans Bengali','Kalpurush',system-ui,sans-serif;font-size:16px;line-height:1.5}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+
+/* ---------- Buttons & fields ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:12px;padding:12px 18px;font-weight:600;background:var(--brand);color:var(--on-brand);min-height:48px}
+.btn:hover{background:var(--brand-2)}
+.btn[disabled]{opacity:.6;cursor:wait}
+.btn.ghost{background:transparent;color:var(--brand);border:1.5px solid var(--line)}
+.btn.ghost:hover{background:var(--bg)}
+.btn.danger{background:transparent;color:var(--bad);border:1.5px solid var(--bad-bg)}
+.btn.block{width:100%}
+.link{background:none;border:0;color:var(--brand);font-weight:600;padding:6px 2px;text-decoration:underline;text-underline-offset:3px}
+.link[disabled]{color:var(--muted);text-decoration:none;cursor:default}
+.field{display:block;margin-bottom:14px}
+.field>span{display:block;font-size:14px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.input{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:11px 14px;min-height:48px}
+.input:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}
+.pw{position:relative}
+.pw .input{padding-right:64px}
+.pw button{position:absolute;right:6px;top:6px;bottom:6px;border:0;background:none;color:var(--brand);font-weight:600;padding:0 10px}
+.code-input{text-align:center;font-size:28px;letter-spacing:10px;font-weight:700}
+.msg{font-size:14px;color:var(--muted);margin:0 0 14px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+
+/* ---------- Auth ---------- */
+#auth{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(24px + var(--safe-t)) 18px calc(24px + var(--safe-b))}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.auth-brand img{width:52px;height:52px;border-radius:14px}
+.auth-brand b{font-size:26px;letter-spacing:.5px;display:block;line-height:1.1}
+.auth-brand small{color:var(--muted)}
+.auth-card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+.auth-card h2{margin:0 0 4px;font-size:21px}
+.tabs{display:flex;background:var(--bg);border-radius:12px;padding:4px;margin-bottom:18px}
+.tabs button{flex:1;border:0;background:none;padding:9px;border-radius:9px;font-weight:600;color:var(--muted)}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.auth-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+
+/* ---------- App shell ---------- */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:6px;padding:calc(8px + var(--safe-t)) 10px 8px;background:var(--brand);color:var(--on-brand)}
+.ib{width:44px;height:44px;border-radius:12px;border:0;background:transparent;color:inherit;display:grid;place-items:center;position:relative}
+.ib:hover{background:rgba(255,255,255,.14)}
+.topbar .brand{font-weight:700;font-size:19px;letter-spacing:.5px;display:none;margin:0 6px 0 2px}
+.search{flex:1;min-width:0;position:relative}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:19px;height:19px;color:var(--muted);pointer-events:none}
+.search input{width:100%;height:44px;border:0;border-radius:12px;background:var(--card);color:var(--ink);padding:0 12px 0 38px}
+.search input::placeholder{color:var(--muted)}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--card);color:var(--brand);font-weight:700;display:grid;place-items:center;font-size:16px;text-transform:uppercase}
+@media(min-width:720px){.topbar .brand{display:block}}
+
+.wrap{max-width:820px;margin:0 auto;padding:16px 14px calc(110px + var(--safe-b))}
+.page-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:4px 0 12px}
+.page-h h1{font-size:21px;margin:0}
+.page-h span{color:var(--muted);font-size:14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin:0 -14px 6px;padding-left:14px;padding-right:14px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;font-weight:600;font-size:14px;color:var(--muted)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+/* product card: left edge shows expiry status */
+.list{display:grid;gap:10px}
+.pc{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-left-width:6px;border-radius:var(--r);padding:10px 12px 10px 10px;width:100%;text-align:left;box-shadow:var(--shadow)}
+.pc.ok{border-left-color:var(--ok)} .pc.soon{border-left-color:#e0a100} .pc.expired{border-left-color:var(--bad)}
+.thumb{width:62px;height:62px;border-radius:10px;background:var(--bg);display:grid;place-items:center;overflow:hidden;flex:none;color:var(--muted)}
+.thumb img{width:100%;height:100%;object-fit:contain;background:#fff}
+.pc .meta{flex:1;min-width:0}
+.pc .nm{font-weight:600;font-size:16px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pc .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.pc .dates{font-size:13px;color:var(--muted)}
+.stamp{flex:none;text-align:center;border-radius:10px;padding:6px 10px;font-weight:700;font-size:13px;line-height:1.25;min-width:78px}
+.stamp small{display:block;font-weight:500;font-size:11px;opacity:.85}
+.stamp.ok{background:var(--ok-bg);color:var(--ok)} .stamp.soon{background:var(--soon-bg);color:var(--soon)} .stamp.expired{background:var(--bad-bg);color:var(--bad)}
+.empty{text-align:center;color:var(--muted);padding:44px 18px;background:var(--card);border:1.5px dashed var(--line);border-radius:var(--r)}
+.empty b{display:block;color:var(--ink);font-size:18px;margin-bottom:4px}
+.empty .btn{margin-top:14px}
+.loading{text-align:center;padding:40px;color:var(--muted)}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 10px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+
+.fab{position:fixed;right:16px;bottom:calc(18px + var(--safe-b));z-index:20;height:56px;border-radius:18px;border:0;background:var(--brand);color:var(--on-brand);padding:0 20px;display:flex;align-items:center;gap:8px;font-weight:700;box-shadow:0 8px 24px rgba(11,122,107,.4)}
+
+/* ---------- Drawer ---------- */
+.scrim{position:fixed;inset:0;background:rgba(6,16,14,.5);z-index:40}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(84vw,320px);background:var(--card);z-index:41;display:flex;flex-direction:column;padding-top:var(--safe-t);transform:translateX(-100%);transition:transform .22s ease}
+.drawer.open{transform:none}
+@media(prefers-reduced-motion:reduce){.drawer{transition:none}}
+.drawer header{padding:18px 18px 12px;display:flex;align-items:center;gap:10px}
+.drawer header img{width:36px;height:36px;border-radius:10px}
+.drawer header b{font-size:19px}
+.drawer nav{overflow-y:auto;padding:4px 10px 20px;flex:1}
+.drawer h3{font-size:13px;color:var(--muted);margin:16px 10px 6px;font-weight:600}
+.dv{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;border-radius:12px;padding:11px 12px;text-align:left;font-weight:500}
+.dv:hover{background:var(--bg)}
+.dv.on{background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand);font-weight:700}
+.dv .n{margin-left:auto;font-size:13px;color:var(--muted)}
+
+/* ---------- Profile menu ---------- */
+.pmenu{position:fixed;top:calc(58px + var(--safe-t));right:10px;z-index:50;width:min(300px,calc(100vw - 20px));background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:8px}
+.pmenu .who{padding:10px 12px 12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.pmenu .who small{color:var(--muted);display:block;font-size:12px}
+.pmenu .who b{word-break:break-all;font-size:15px}
+
+/* ---------- Modal / bottom sheet ---------- */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(6,16,14,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:94vh;overflow-y:auto;background:var(--card);border-radius:22px 22px 0 0;padding:16px 18px calc(20px + var(--safe-b))}
+@media(min-width:640px){.modal{align-items:center}.sheet{border-radius:22px}}
+.sheet h2{margin:0;font-size:20px}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.imgprev{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.imgprev .thumb{width:76px;height:76px}
+.reader-box{background:#000;border-radius:16px;overflow:hidden;min-height:240px;display:grid;place-items:center;color:#fff;margin-bottom:12px}
+#reader{width:100%}
+.toast{position:fixed;left:50%;bottom:calc(90px + var(--safe-b));transform:translateX(-50%);z-index:100;background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:500;max-width:calc(100vw - 32px);box-shadow:0 8px 24px rgba(0,0,0,.3);text-align:center}
+.toast.err{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
+</style>
+</head>
+<body>
+
+<!-- ===================== AUTH ===================== -->
+<div id="auth" hidden>
+  <div class="auth-brand">
+    <img src="icon-192.png" alt="">
+    <div><b>PEMS</b><small>প্রোডাক্টের মেয়াদ, এক নজরে</small></div>
+  </div>
+
+  <div class="auth-card">
+    <!-- login / register tabs -->
+    <div class="tabs" id="authTabs">
+      <button type="button" data-go="login" class="on">লগইন</button>
+      <button type="button" data-go="register">রেজিস্টার</button>
+    </div>
+
+    <form data-view="login" autocomplete="on">
+      <label class="field"><span>Gmail</span>
+        <input class="input" type="email" name="email" autocomplete="username" placeholder="name@gmail.com" required></label>
+      <label class="field"><span>পাসওয়ার্ড</span>
+        <div class="pw"><input class="input" type="password" name="password" autocomplete="current-password" required><button type="button" data-toggle>দেখান</button></div></label>
+      <button class="btn block" type="submit">লগইন করুন</button>
+      <div class="auth-foot"><button type="button" class="link" data-go="forgot">পাসওয়ার্ড ভুলে গেছেন?</button></div>
+    </form>
+
+    <form data-view="register" hidden autocomplete="on">
+      <label class="field"><span>Gmail</span>
+        <input class="input" type="email" name="email" autocomplete="username" placeholder="name@gmail.com" required></label>
+      <label class="field"><span>পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</span>
+        <div class="pw"><input class="input" type="password" name="password" autocomplete="new-password" minlength="6" required><button type="button" data-toggle>দেখান</button></div></label>
+      <label class="field"><span>পাসওয়ার্ড আবার লিখুন</span>
+        <input class="input" type="password" name="password2" autocomplete="new-password" minlength="6" required></label>
+      <button class="btn block" type="submit">রেজিস্টার করুন</button>
+      <p class="msg" style="margin-top:12px">আপনার Gmail-এ একটি ৬ সংখ্যার কোড যাবে।</p>
+    </form>
+
+    <form data-view="verify" hidden>
+      <h2>Gmail যাচাই করুন</h2>
+      <p class="msg"><b class="pend"></b> ঠিকানায় ৬ সংখ্যার কোড পাঠানো হয়েছে। স্প্যাম ফোল্ডারও দেখুন।</p>
+      <label class="field"><span>কোড</span>
+        <input class="input code-input" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></label>
+      <button class="btn block" type="submit">যাচাই করুন</button>
+      <div class="auth-foot">
+        <button type="button" class="link" data-resend>আবার কোড পাঠান</button>
+        <button type="button" class="link" data-go="login">ফিরে যান</button>
+      </div>
+    </form>
+
+    <form data-view="forgot" hidden>
+      <h2>পাসওয়ার্ড ভুলে গেছেন?</h2>
+      <p class="msg">আপনার Gmail লিখুন। আমরা সেখানে একটি কোড পাঠাব।</p>
+      <label class="field"><span>Gmail</span>
+        <input class="input" type="email" name="email" autocomplete="username" placeholder="name@gmail.com" required></label>
+      <button class="btn block" type="submit">কোড পাঠান</button>
+      <div class="auth-foot"><button type="button" class="link" data-go="login">ফিরে যান</button></div>
+    </form>
+
+    <form data-view="reset" hidden>
+      <h2>নতুন পাসওয়ার্ড দিন</h2>
+      <p class="msg"><b class="pend"></b> ঠিকানায় কোড গেছে (যদি অ্যাকাউন্টটি থাকে)।</p>
+      <label class="field"><span>কোড</span>
+        <input class="input code-input" name="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></label>
+      <label class="field"><span>নতুন পাসওয়ার্ড</span>
+        <div class="pw"><input class="input" type="password" name="password" autocomplete="new-password" minlength="6" required><button type="button" data-toggle>দেখান</button></div></label>
+      <label class="field"><span>নতুন পাসওয়ার্ড আবার লিখুন</span>
+        <input class="input" type="password" name="password2" autocomplete="new-password" minlength="6" required></label>
+      <button class="btn block" type="submit">পাসওয়ার্ড বদলান</button>
+      <div class="auth-foot">
+        <button type="button" class="link" data-resend>আবার কোড পাঠান</button>
+        <button type="button" class="link" data-go="login">ফিরে যান</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app" hidden>
+  <header class="topbar">
+    <button class="ib" id="btnMenu" aria-label="মেনু"></button>
+    <span class="brand">PEMS</span>
+    <label class="search">
+      <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="q" type="search" placeholder="নাম, বারকোড বা ক্যাটাগরি খুঁজুন" aria-label="সার্চ">
+    </label>
+    <button class="ib" id="btnScan" aria-label="বারকোড স্ক্যান"></button>
+    <button class="ib" id="btnProfile" aria-label="প্রোফাইল"><span class="avatar" id="avatar">P</span></button>
+  </header>
+
+  <main class="wrap" id="main"></main>
+
+  <button class="fab" id="btnAdd"></button>
+</div>
+
+<!-- Drawer -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="মেনু">
+  <header><img src="icon-192.png" alt=""><b>PEMS</b></header>
+  <nav id="drawerNav"></nav>
+</aside>
+
+<!-- Profile menu -->
+<div id="pmenuWrap" hidden>
+  <div class="scrim" style="background:transparent;z-index:49" data-close-pmenu></div>
+  <div class="pmenu">
+    <div class="who"><small>লগইন করা আছে</small><b id="pmEmail"></b></div>
+    <button class="dv" id="pmSheet"></button>
+    <button class="dv" id="pmRefresh"></button>
+    <button class="dv" id="pmInstall" hidden></button>
+    <button class="dv" id="pmLogout" style="color:var(--bad)"></button>
+  </div>
+</div>
+
+<!-- Product modal -->
+<div class="modal" id="productModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-h"><h2 id="pmTitle">নতুন প্রোডাক্ট</h2><button class="ib" style="color:var(--ink)" data-close aria-label="বন্ধ"></button></div>
+    <form id="productForm">
+      <div class="imgprev">
+        <div class="thumb" id="pfThumb"></div>
+        <label class="field" style="flex:1;margin:0"><span>ছবির লিংক (ঐচ্ছিক)</span>
+          <input class="input" name="image" type="url" inputmode="url" placeholder="https://…"></label>
+      </div>
+      <label class="field"><span>বারকোড নম্বর</span>
+        <input class="input" name="barcode" inputmode="numeric" placeholder="যেমন 8901234567890"></label>
+      <label class="field"><span>প্রোডাক্টের নাম *</span>
+        <input class="input" name="name" required maxlength="120"></label>
+      <label class="field"><span>ক্যাটাগরি</span>
+        <input class="input" name="category" list="catList" placeholder="যেমন খাবার, ওষুধ" maxlength="40"></label>
+      <datalist id="catList"></datalist>
+      <div class="row">
+        <label class="field"><span>উৎপাদনের তারিখ</span><input class="input" type="date" name="mfg"></label>
+        <label class="field"><span>মেয়াদ শেষের তারিখ *</span><input class="input" type="date" name="exp" required></label>
+      </div>
+      <label class="field"><span>নোট (ঐচ্ছিক)</span>
+        <input class="input" name="note" maxlength="300" placeholder="যেমন ব্যাচ নম্বর, কোথায় রাখা আছে"></label>
+      <button class="btn block" type="submit" id="pfSave">সেভ করুন</button>
+      <button class="btn danger block" type="button" id="pfDelete" style="margin-top:10px" hidden>প্রোডাক্ট মুছুন</button>
+    </form>
+  </div>
+</div>
+
+<!-- Scanner modal -->
+<div class="modal" id="scanModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <div class="sheet-h"><h2>বারকোড স্ক্যান</h2><button class="ib" style="color:var(--ink)" data-close aria-label="বন্ধ"></button></div>
+    <div class="reader-box"><div id="reader"></div><span id="readerMsg" class="msg" style="color:#fff;padding:20px;text-align:center"></span></div>
+    <p class="msg">বারকোডটি ফ্রেমের ভেতরে ধরুন। স্ক্যান হলে নাম ও ছবি নিজে থেকেই আসবে।</p>
+    <form id="codeForm" class="row" style="align-items:end">
+      <label class="field" style="margin:0;flex:2"><span>অথবা নম্বর লিখুন</span><input class="input" name="code" inputmode="numeric" placeholder="বারকোড নম্বর"></label>
+      <button class="btn ghost" type="submit" style="flex:1">খুঁজুন</button>
+    </form>
+    <button class="btn ghost block" id="scanManual" style="margin-top:12px">ম্যানুয়ালি এন্ট্রি দিন</button>
+  </div>
+</div>
+
+<div id="toastBox"></div>
+
+<script>
+/* =========================================================
+   ⚙️ কনফিগারেশন — শুধু এই লাইনটি বদলাতে হবে
+   Apps Script Web App-এর URL এখানে বসান
+   ========================================================= */
+const API_URL = 'https://script.google.com/macros/s/AKfycbyIyBeSS7uCTgzLZ1Dp5EyZV412UbF9J8QungAhb4OqY4x9zfZD82liOkoOdoYTHe_2/exec';
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bn = n => Number(n).toLocaleString('bn-BD');
+const ICON = {
+  menu:'<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
+  scan:'<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  box:'<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  tag:'<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+  out:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  ext:'<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
+  refresh:'<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  dl:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'
+};
+const ic = k => `<svg class="i" viewBox="0 0 24 24">${ICON[k]}</svg>`;
+
+function toast(msg, err) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (err ? ' err' : '');
+  t.textContent = msg;
+  $('#toastBox').appendChild(t);
+  setTimeout(() => t.remove(), err ? 5000 : 2800);
+}
+
+/* ---------- state ---------- */
+const LS = {
+  get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+  del: k => { try { localStorage.removeItem(k); } catch {} }
+};
+const S = {
+  token: LS.get('pems_token'), email: LS.get('pems_email'), sheetUrl: LS.get('pems_sheet'),
+  products: [], loaded: false, query: '',
+  view: { mode: 'home', cat: '', filter: 'near' },
+  pending: '', purpose: 'register', editing: null
+};
+const DEFAULT_CATS = ['খাবার', 'পানীয়', 'ওষুধ', 'প্রসাধনী', 'পরিষ্কার সামগ্রী', 'অন্যান্য'];
+
+/* ---------- API ---------- */
+async function api(action, data = {}) {
+  if (API_URL.startsWith('PASTE_')) throw new Error('index.html-এ API_URL বসানো হয়নি। সেটআপ গাইড দেখুন।');
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, token: S.token, device: navigator.userAgent.slice(0, 60), ...data })
+    });
+  } catch { throw new Error('ইন্টারনেট সংযোগ নেই বা সার্ভারে পৌঁছানো যাচ্ছে না'); }
+  let j;
+  try { j = await res.json(); } catch { throw new Error('সার্ভার থেকে সঠিক উত্তর আসেনি'); }
+  if (!j.ok) {
+    if (j.code === 'AUTH') { clearSession(); showAuth('login'); }
+    const e = new Error(j.error || 'সমস্যা হয়েছে'); e.code = j.code; throw e;
+  }
+  return j;
+}
+
+async function busy(btn, fn) {
+  const old = btn.innerHTML; btn.disabled = true; btn.textContent = 'অপেক্ষা করুন…';
+  try { return await fn(); } catch (e) { toast(e.message, true); } finally { btn.disabled = false; btn.innerHTML = old; }
+}
+
+/* =========================================================
+   AUTH
+   ========================================================= */
+function showAuth(view) {
+  $('#app').hidden = true; $('#auth').hidden = false;
+  $$('#auth form').forEach(f => f.hidden = f.dataset.view !== view);
+  $('#authTabs').hidden = !(view === 'login' || view === 'register');
+  $$('#authTabs button').forEach(b => b.classList.toggle('on', b.dataset.go === view));
+  $$('.pend').forEach(e => e.textContent = S.pending);
+  if (view === 'verify' || view === 'reset') startCountdown();
+}
+
+let cdTimer;
+function startCountdown() {
+  clearInterval(cdTimer);
+  let left = 60;
+  const btns = $$('[data-resend]');
+  const tick = () => {
+    btns.forEach(b => { b.disabled = left > 0; b.textContent = left > 0 ? `আবার কোড পাঠান (${bn(left)})` : 'আবার কোড পাঠান'; });
+    if (left-- <= 0) clearInterval(cdTimer);
+  };
+  tick(); cdTimer = setInterval(tick, 1000);
+}
+
+$('#auth').addEventListener('click', e => {
+  const go = e.target.closest('[data-go]'); if (go) return showAuth(go.dataset.go);
+  const tg = e.target.closest('[data-toggle]');
+  if (tg) { const inp = tg.previousElementSibling; inp.type = inp.type === 'password' ? 'text' : 'password'; tg.textContent = inp.type === 'password' ? 'দেখান' : 'লুকান'; }
+  const rs = e.target.closest('[data-resend]');
+  if (rs && !rs.disabled) busy(rs, async () => {
+    await api('resendCode', { email: S.pending, purpose: S.purpose });
+    toast('নতুন কোড পাঠানো হয়েছে'); startCountdown();
+  });
+});
+
+const formData = f => Object.fromEntries(new FormData(f));
+
+$('[data-view=login]').addEventListener('submit', async e => {
+  e.preventDefault(); const d = formData(e.target);
+  await busy($('button[type=submit]', e.target), async () => {
+    try {
+      onLoggedIn(await api('login', { email: d.email, password: d.password }));
+    } catch (err) {
+      if (err.code === 'UNVERIFIED') {
+        S.pending = d.email.trim().toLowerCase(); S.purpose = 'register';
+        try { await api('resendCode', { email: S.pending, purpose: 'register' }); } catch {}
+        showAuth('verify'); toast('আগে Gmail যাচাই করুন');
+      } else throw err;
+    }
+  });
+});
+
+$('[data-view=register]').addEventListener('submit', async e => {
+  e.preventDefault(); const d = formData(e.target);
+  if (d.password !== d.password2) return toast('দুইটি পাসওয়ার্ড মেলেনি', true);
+  await busy($('button[type=submit]', e.target), async () => {
+    const r = await api('register', { email: d.email, password: d.password });
+    S.pending = r.email; S.purpose = 'register'; showAuth('verify'); toast('কোড পাঠানো হয়েছে');
+  });
+});
+
+$('[data-view=verify]').addEventListener('submit', async e => {
+  e.preventDefault(); const d = formData(e.target);
+  await busy($('button[type=submit]', e.target), async () => {
+    onLoggedIn(await api('verifyRegister', { email: S.pending, code: d.code }));
+    e.target.reset();
+  });
+});
+
+$('[data-view=forgot]').addEventListener('submit', async e => {
+  e.preventDefault(); const d = formData(e.target);
+  await busy($('button[type=submit]', e.target), async () => {
+    await api('forgot', { email: d.email });
+    S.pending = d.email.trim().toLowerCase(); S.purpose = 'reset'; showAuth('reset');
+    toast('আপনার Gmail-এ কোড পাঠানো হয়েছে');
+  });
+});
+
+$('[data-view=reset]').addEventListener('submit', async e => {
+  e.preventDefault(); const d = formData(e.target);
+  if (d.password !== d.password2) return toast('দুইটি পাসওয়ার্ড মেলেনি', true);
+  await busy($('button[type=submit]', e.target), async () => {
+    await api('reset', { email: S.pending, code: d.code, password: d.password });
+    e.target.reset(); showAuth('login'); toast('পাসওয়ার্ড বদলানো হয়েছে। এখন লগইন করুন।');
+  });
+});
+
+function onLoggedIn(r) {
+  S.token = r.token; S.email = r.email; S.sheetUrl = r.sheetUrl || '';
+  LS.set('pems_token', S.token); LS.set('pems_email', S.email); LS.set('pems_sheet', S.sheetUrl);
+  S.products = []; S.loaded = false; S.view = { mode: 'home', cat: '', filter: 'near' }; S.query = ''; $('#q').value = '';
+  showApp();
+}
+
+function clearSession() {
+  S.token = ''; S.email = ''; S.sheetUrl = ''; S.products = []; S.loaded = false;
+  ['pems_token', 'pems_email', 'pems_sheet'].forEach(LS.del);
+}
+
+async function logout() {
+  const t = S.token; closeAll();
+  try { await api('logout'); } catch {}
+  clearSession(); showAuth('login');
+}
+
+/* =========================================================
+   APP
+   ========================================================= */
+function showApp() {
+  $('#auth').hidden = true; $('#app').hidden = false;
+  $('#avatar').textContent = (S.email || 'P')[0];
+  $('#pmEmail').textContent = S.email;
+  const cached = LS.get('pems_cache_' + S.email);
+  if (cached) { try { S.products = JSON.parse(cached); S.loaded = true; } catch {} }
+  render(); refresh(true);
+}
+
+async function refresh(silent) {
+  try {
+    const r = await api('listProducts');
+    S.products = r.products; S.loaded = true;
+    LS.set('pems_cache_' + S.email, JSON.stringify(S.products));
+    render(); drawerRender();
+    if (!silent) toast('আপডেট হয়েছে');
+  } catch (e) { if (!silent || !S.loaded) toast(e.message, true); render(); }
+}
+
+/* ----- date logic ----- */
+function daysLeft(exp) {
+  const [y, m, d] = exp.split('-').map(Number);
+  const t = new Date();
+  return Math.round((new Date(y, m - 1, d) - new Date(t.getFullYear(), t.getMonth(), t.getDate())) / 864e5);
+}
+const statusOf = p => { const d = daysLeft(p.exp); return d < 0 ? 'expired' : d <= 30 ? 'soon' : 'ok'; };
+function fmtDate(s) {
+  if (!s) return '—'; const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function stampHTML(p) {
+  const d = daysLeft(p.exp), st = statusOf(p);
+  if (d < 0) return `<div class="stamp ${st}">মেয়াদ শেষ<small>${bn(-d)} দিন আগে</small></div>`;
+  if (d === 0) return `<div class="stamp ${st}">আজ শেষ<small>আজই ব্যবহার করুন</small></div>`;
+  return `<div class="stamp ${st}">${bn(d)} দিন<small>বাকি</small></div>`;
+}
+
+/* ----- render list ----- */
+function counts() {
+  const c = { expired: 0, soon: 0, ok: 0 };
+  S.products.forEach(p => c[statusOf(p)]++);
+  return c;
+}
+
+function cardHTML(p) {
+  const st = statusOf(p);
+  const img = p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createRange().createContextualFragment(ICONBOX))">` : ICONBOX;
+  return `<button class="pc ${st}" data-id="${esc(p.id)}">
+    <div class="thumb">${img}</div>
+    <div class="meta">
+      <div class="nm">${esc(p.name)}</div>
+      <div class="sub">${esc(p.category || 'ক্যাটাগরি নেই')}${p.barcode ? ' • ' + esc(p.barcode) : ''}</div>
+      <div class="dates">মেয়াদ: ${fmtDate(p.exp)}</div>
+    </div>${stampHTML(p)}</button>`;
+}
+const ICONBOX = ic('box');
+
+function render() {
+  const main = $('#main'), v = S.view, q = S.query.trim().toLowerCase();
+  if (!S.loaded) { main.innerHTML = '<div class="loading"><div class="spin"></div>লোড হচ্ছে…</div>'; return; }
+
+  let list = [...S.products], title = '', chips = '', emptyMsg = '';
+  const c = counts();
+
+  if (q) {
+    list = list.filter(p => [p.name, p.barcode, p.category, p.note].join(' ').toLowerCase().includes(q));
+    title = 'সার্চের ফলাফল';
+    emptyMsg = `<b>কিছু পাওয়া যায়নি</b>অন্য শব্দ দিয়ে খুঁজুন।`;
+  } else if (v.mode === 'cat') {
+    list = list.filter(p => (p.category || 'অন্যান্য') === v.cat);
+    title = v.cat; emptyMsg = '<b>এই ক্যাটাগরিতে প্রোডাক্ট নেই</b>';
+  } else if (v.mode === 'all') {
+    title = 'সব প্রোডাক্ট'; emptyMsg = '<b>এখনো কোনো প্রোডাক্ট নেই</b>নিচের বাটন দিয়ে প্রথম প্রোডাক্ট যোগ করুন।';
+  } else {
+    title = 'নিকটবর্তী মেয়াদ';
+    const f = v.filter;
+    list = list.filter(p => { const s = statusOf(p); return f === 'near' ? s !== 'ok' : s === f; });
+    const chip = (k, t, n) => `<button class="chip ${f === k ? 'on' : ''}" data-filter="${k}">${t} (${bn(n)})</button>`;
+    chips = `<div class="chips">${chip('near', 'নিকটবর্তী', c.expired + c.soon)}${chip('expired', 'মেয়াদ শেষ', c.expired)}${chip('soon', '৩০ দিনের মধ্যে', c.soon)}${chip('ok', 'ভালো আছে', c.ok)}</div>`;
+    emptyMsg = S.products.length
+      ? `<b>সব ঠিক আছে 🎉</b>এখন কোনো প্রোডাক্টের মেয়াদ শেষ হচ্ছে না।<br><button class="btn ghost" data-mode="all">সব প্রোডাক্ট দেখুন</button>`
+      : `<b>এখনো কোনো প্রোডাক্ট নেই</b>বারকোড স্ক্যান করে বা ম্যানুয়ালি প্রথম প্রোডাক্ট যোগ করুন।<br><button class="btn" data-act="scan">${ic('scan')} স্ক্যান করুন</button>`;
+  }
+  list.sort((a, b) => a.exp.localeCompare(b.exp));
+
+  main.innerHTML = `<div class="page-h"><h1>${esc(title)}</h1><span>${bn(list.length)}টি প্রোডাক্ট</span></div>${chips}
+    <div class="list">${list.length ? list.map(cardHTML).join('') : `<div class="empty">${emptyMsg}</div>`}</div>`;
+}
+
+$('#main').addEventListener('click', e => {
+  const f = e.target.closest('[data-filter]'); if (f) { S.view.filter = f.dataset.filter; return render(); }
+  const m = e.target.closest('[data-mode]'); if (m) { setView({ mode: m.dataset.mode }); return; }
+  if (e.target.closest('[data-act=scan]')) return openScanner();
+  const c = e.target.closest('.pc'); if (c) openProduct(S.products.find(p => p.id === c.dataset.id));
+});
+
+/* ----- search ----- */
+let qTimer;
+$('#q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { S.query = e.target.value; render(); }, 150); });
+
+/* ----- drawer ----- */
+function setView(v) {
+  S.view = { mode: 'home', cat: '', filter: 'near', ...v };
+  S.query = ''; $('#q').value = ''; closeAll(); render(); drawerRender(); window.scrollTo(0, 0);
+}
+function drawerRender() {
+  const cats = {};
+  S.products.forEach(p => { const k = p.category || 'অন্যান্য'; cats[k] = (cats[k] || 0) + 1; });
+  const v = S.view;
+  const item = (icon, label, n, on, attr) => `<button class="dv ${on ? 'on' : ''}" ${attr}>${ic(icon)}<span>${esc(label)}</span>${n !== undefined ? `<span class="n">${bn(n)}</span>` : ''}</button>`;
+  $('#drawerNav').innerHTML =
+    item('home', 'হোম (নিকটবর্তী মেয়াদ)', undefined, v.mode === 'home', 'data-v="home"') +
+    item('box', 'সব প্রোডাক্ট', S.products.length, v.mode === 'all', 'data-v="all"') +
+    '<h3>ক্যাটাগরি</h3>' +
+    (Object.keys(cats).length
+      ? Object.keys(cats).sort().map(k => item('tag', k, cats[k], v.mode === 'cat' && v.cat === k, `data-v="cat" data-cat="${esc(k)}"`)).join('')
+      : '<p class="msg" style="margin:6px 12px">প্রোডাক্ট যোগ করলে ক্যাটাগরি এখানে দেখা যাবে।</p>');
+}
+$('#drawerNav').addEventListener('click', e => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  setView({ mode: b.dataset.v, cat: b.dataset.cat || '' });
+});
+function openDrawer() { drawerRender(); $('#scrim').hidden = false; $('#drawer').classList.add('open'); }
+function closeAll() {
+  $('#scrim').hidden = true; $('#drawer').classList.remove('open'); $('#pmenuWrap').hidden = true;
+}
+$('#btnMenu').onclick = openDrawer; $('#scrim').onclick = closeAll;
+
+/* ----- profile menu ----- */
+$('#btnProfile').onclick = () => { $('#pmenuWrap').hidden = !$('#pmenuWrap').hidden; };
+$('[data-close-pmenu]').onclick = closeAll;
+$('#pmSheet').onclick = () => { closeAll(); if (S.sheetUrl) window.open(S.sheetUrl, '_blank', 'noopener'); else toast('Sheet-এর লিংক পাওয়া যায়নি', true); };
+$('#pmRefresh').onclick = () => { closeAll(); refresh(false); };
+$('#pmLogout').onclick = logout;
+
+/* ----- static icons ----- */
+$('#btnMenu').innerHTML = ic('menu'); $('#btnScan').innerHTML = ic('scan');
+$('#btnAdd').innerHTML = ic('plus') + '<span>প্রোডাক্ট যোগ</span>';
+$('#pmSheet').innerHTML = ic('ext') + '<span>আমার Google Sheet খুলুন</span>';
+$('#pmRefresh').innerHTML = ic('refresh') + '<span>রিফ্রেশ করুন</span>';
+$('#pmInstall').innerHTML = ic('dl') + '<span>অ্যাপ ইনস্টল করুন</span>';
+$('#pmLogout').innerHTML = ic('out') + '<span>লগআউট</span>';
+$$('[data-close]').forEach(b => b.innerHTML = ic('x'));
+
+/* ----- PWA install ----- */
+let deferredInstall;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; $('#pmInstall').hidden = false; });
+$('#pmInstall').onclick = async () => { closeAll(); if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; $('#pmInstall').hidden = true; } };
+
+/* =========================================================
+   PRODUCT FORM
+   ========================================================= */
+const pf = $('#productForm');
+function openProduct(p, prefill) {
+  S.editing = p || null;
+  $('#pmTitle').textContent = p ? 'প্রোডাক্ট সম্পাদনা' : 'নতুন প্রোডাক্ট';
+  $('#pfDelete').hidden = !p;
+  const d = p || prefill || {};
+  ['barcode', 'name', 'category', 'image', 'mfg', 'exp', 'note'].forEach(k => pf.elements[k].value = d[k] || '');
+  const cats = new Set(DEFAULT_CATS); S.products.forEach(x => x.category && cats.add(x.category));
+  $('#catList').innerHTML = [...cats].map(c => `<option value="${esc(c)}">`).join('');
+  thumbUpdate();
+  $('#productModal').hidden = false;
+}
+function thumbUpdate() {
+  const u = pf.elements.image.value.trim();
+  $('#pfThumb').innerHTML = /^https?:\/\//i.test(u)
+    ? `<img src="${esc(u)}" alt="" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createRange().createContextualFragment(ICONBOX))">` : ICONBOX;
+}
+pf.elements.image.addEventListener('input', thumbUpdate);
+$('#productModal').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-close]')) $('#productModal').hidden = true; });
+$('#btnAdd').onclick = () => openProduct(null);
+
+pf.addEventListener('submit', async e => {
+  e.preventDefault();
+  const d = formData(pf);
+  if (d.mfg && d.mfg > d.exp) return toast('মেয়াদ শেষের তারিখ উৎপাদনের তারিখের আগে হতে পারে না', true);
+  const product = { ...d, id: S.editing ? S.editing.id : '' };
+  await busy($('#pfSave'), async () => {
+    const r = await api('saveProduct', { product });
+    const i = S.products.findIndex(p => p.id === r.product.id);
+    if (i >= 0) S.products[i] = r.product; else S.products.push(r.product);
+    LS.set('pems_cache_' + S.email, JSON.stringify(S.products));
+    $('#productModal').hidden = true; render(); drawerRender(); toast('সেভ হয়েছে');
+  });
+});
+
+$('#pfDelete').onclick = async () => {
+  if (!S.editing || !confirm(`“${S.editing.name}” মুছে ফেলবেন?`)) return;
+  await busy($('#pfDelete'), async () => {
+    await api('deleteProduct', { id: S.editing.id });
+    S.products = S.products.filter(p => p.id !== S.editing.id);
+    LS.set('pems_cache_' + S.email, JSON.stringify(S.products));
+    $('#productModal').hidden = true; render(); drawerRender(); toast('মুছে ফেলা হয়েছে');
+  });
+};
+
+/* =========================================================
+   BARCODE SCANNER + ONLINE LOOKUP
+   ========================================================= */
+let scanner = null, libPromise = null;
+function loadScannerLib() {
+  if (window.Html5Qrcode) return Promise.resolve();
+  return libPromise ||= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js';
+    s.onload = res; s.onerror = () => { libPromise = null; rej(new Error('স্ক্যানার লোড হয়নি')); };
+    document.head.appendChild(s);
+  });
+}
+
+async function openScanner() {
+  $('#scanModal').hidden = false; $('#readerMsg').textContent = 'ক্যামেরা চালু হচ্ছে…';
+  try {
+    await loadScannerLib();
+    const F = Html5QrcodeSupportedFormats;
+    scanner = new Html5Qrcode('reader', { formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE], verbose: false, useBarCodeDetectorIfSupported: true });
+    await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 260, height: 150 } },
+      async code => { await stopScanner(); $('#scanModal').hidden = true; handleCode(code); }, () => {});
+    $('#readerMsg').textContent = '';
+  } catch (e) {
+    scanner = null;
+    $('#readerMsg').textContent = 'ক্যামেরা চালু করা যায়নি। ব্রাউজারে ক্যামেরার অনুমতি দিন, অথবা নিচে নম্বর লিখুন।';
+  }
+}
+async function stopScanner() {
+  if (!scanner) return;
+  try { await scanner.stop(); scanner.clear(); } catch {}
+  scanner = null;
+}
+async function closeScanner() { await stopScanner(); $('#scanModal').hidden = true; }
+$('#btnScan').onclick = openScanner;
+$('#scanModal').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-close]')) closeScanner(); });
+$('#scanManual').onclick = async () => { await closeScanner(); openProduct(null); };
+$('#codeForm').addEventListener('submit', async e => {
+  e.preventDefault(); const c = formData(e.target).code.trim(); if (!c) return;
+  await closeScanner(); handleCode(c); e.target.reset();
+});
+
+async function handleCode(code) {
+  toast('প্রোডাক্টের তথ্য খোঁজা হচ্ছে…');
+  const info = await lookup(code);
+  if (info) toast('তথ্য পাওয়া গেছে ✔'); else toast('অনলাইনে তথ্য পাওয়া যায়নি, নিজে লিখুন', true);
+  openProduct(null, { barcode: code, name: info?.name || '', image: info?.image || '', category: info?.category || '' });
+}
+
+const SOURCES = [
+  'https://world.openfoodfacts.org/api/v2/product/',
+  'https://world.openbeautyfacts.org/api/v2/product/',
+  'https://world.openproductsfacts.org/api/v2/product/'
+];
+async function lookup(code) {
+  const clean = code.replace(/\D/g, '');
+  if (!clean) return null;
+  for (const base of SOURCES) {
+    try {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+      const r = await fetch(`${base}${clean}.json?fields=product_name,product_name_en,brands,image_front_small_url,image_front_url,image_url`, { signal: ctl.signal });
+      clearTimeout(t);
+      const j = await r.json();
+      if (j.status === 1 && j.product) {
+        const p = j.product;
+        const nm = (p.product_name || p.product_name_en || '').trim();
+        const brand = (p.brands || '').split(',')[0].trim();
+        const name = brand && nm && !nm.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${nm}` : (nm || brand);
+        if (name) return { name, image: p.image_front_small_url || p.image_front_url || p.image_url || '' };
+      }
+    } catch {}
+  }
+  return null;
+}
+
+/* =========================================================
+   START
+   ========================================================= */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (S.token && S.email) showApp(); else showAuth('login');
+</script>
+</body>
+</html>
